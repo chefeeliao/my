@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>趣味数学练习 - 智能出题版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4A9DFF',
+                        secondary: '#FFD54F',
+                        success: '#4CAF50',
+                        danger: '#F44336',
+                        warning: '#FF9800',
+                        info: '#2196F3',
+                        light: '#FFF9C4',
+                        dark: '#5D4037'
+                    },
+                    fontFamily: {
+                        sans: ['Comic Sans MS', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            }
+            .star-glow {
+                text-shadow: 0 0 10px rgba(255, 213, 79, 0.8);
+            }
+            .twinkle {
+                animation: twinkle 1s ease-in-out infinite alternate;
+            }
+            .correct-animation {
+                animation: correctAnswer 0.5s ease-in-out;
+            }
+            .wrong-animation {
+                animation: wrongAnswer 0.5s ease-in-out;
+            }
+            .float {
+                animation: float 3s ease-in-out infinite;
+            }
+            @keyframes twinkle {
+                from { opacity: 0.8; transform: scale(1); }
+                to { opacity: 1; transform: scale(1.1); }
+            }
+            @keyframes correctAnswer {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); background-color: rgba(76, 175, 80, 0.2); }
+                100% { transform: scale(1); }
+            }
+            @keyframes wrongAnswer {
+                0% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                50% { transform: translateX(5px); }
+                75% { transform: translateX(-5px); }
+                100% { transform: translateX(0); }
+            }
+            @keyframes float {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-blue-100 to-purple-100 min-h-screen">
+    <!-- 顶部导航 -->
+    <header class="bg-gradient-to-r from-primary to-info text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <i class="fa fa-calculator text-3xl mr-3 text-secondary"></i>
+                <h1 class="text-2xl md:text-3xl font-bold text-shadow">趣味数学练习</h1>
+            </div>
+            <div class="text-lg font-semibold">
+                <i class="fa fa-star text-secondary mr-1"></i>
+                <span id="totalScore">0</span> 分
+                <span class="ml-4 text-sm bg-secondary/80 px-2 py-1 rounded-full">
+                    当前难度: <span id="currentDifficulty">1</span>星
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 开始界面 -->
+        <div id="startScreen" class="flex flex-col items-center justify-center min-h-[60vh] z-50 relative">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl md:text-5xl font-bold text-primary mb-4 text-shadow-lg float">
+                    欢迎来到数学乐园！
+                </h2>
+                <p class="text-xl text-gray-700 mb-6">
+                    智能出题系统会根据你的答题情况调整难度哦！
+                </p>
+                <!-- 学习进度提示 -->
+                <div id="learningTip" class="hidden bg-light p-4 rounded-xl shadow-md max-w-md mx-auto mb-6">
+                    <h3 class="font-bold text-primary mb-2"><i class="fa fa-lightbulb-o mr-2"></i>学习建议</h3>
+                    <p id="tipContent" class="text-gray-700 text-left">
+                        开始你的第一次练习，系统会根据你的表现调整题目难度！
+                    </p>
+                </div>
+            </div>
+            
+            <div class="relative mb-12">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/aaee1274a0534f80a9dfa1bf090b436a~tplv-a9rns2rl98-image.image?lk3s=8e244e95&rcl=202601161755478BC4EB34DD7E510F9AC8&rrcfp=f06b921b&x-expires=1771149393&x-signature=m8KtBEeL3exyTQ2nYdVp5%2FNsUmY%3D" 
+                     alt="数学老师" 
+                     class="w-48 h-48 object-contain float">
+                <div class="absolute -top-4 -right-4 bg-secondary text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold transform rotate-12 shadow-lg">
+                    你好！
+                </div>
+            </div>
+            
+            <button id="startBtn" class="bg-gradient-to-r from-primary to-info text-white text-2xl font-bold px-12 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 z-10 relative"
+                    style="pointer-events: auto !important; cursor: pointer !important;">
+                <i class="fa fa-play-circle mr-3"></i>
+                开始练习
+            </button>
+        </div>
+
+        <!-- 题目界面 -->
+        <div id="quizScreen" class="hidden z-40 relative">
+            <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-primary">
+                        <i class="fa fa-pencil-square-o mr-2"></i>
+                        数学题目
+                    </h2>
+                    <div class="text-lg font-semibold text-gray-700">
+                        题目 <span id="currentQuestion">1</span>/5
+                    </div>
+                </div>
+                
+                <!-- 难度星级 -->
+                <div id="difficultyStars" class="flex justify-center mb-6">
+                    <!-- 星级将动态生成 -->
+                </div>
+                
+                <!-- 题目内容 -->
+                <div id="questionContainer" class="mb-8">
+                    <div id="questionText" class="text-2xl md:text-3xl font-bold text-center mb-6 p-4 bg-light rounded-xl shadow-inner">
+                        <!-- 题目将动态生成 -->
+                    </div>
+                    
+                    <!-- 答题区域 -->
+                    <div class="flex justify-center">
+                        <input type="text" id="answerInput" 
+                               class="w-full md:w-1/2 lg:w-1/3 text-2xl text-center border-4 border-primary rounded-xl p-4 focus:outline-none focus:border-info transition-colors duration-300"
+                               placeholder="请输入你的答案..." maxlength="10"
+                               style="display: block !important; visibility: visible !important; opacity: 1 !important;">
+                    </div>
+                </div>
+                
+                <!-- 按钮区域 -->
+                <div class="flex flex-col md:flex-row justify-center gap-4">
+                    <button id="submitAnswerBtn" class="bg-success text-white text-xl font-bold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+                        <i class="fa fa-check-circle mr-2"></i>
+                        提交答案
+                    </button>
+                    <button id="hintBtn" class="bg-warning text-white text-xl font-bold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+                        <i class="fa fa-lightbulb-o mr-2"></i>
+                        提示
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 解析区域 -->
+            <div id="explanationContainer" class="hidden bg-white rounded-2xl shadow-xl p-6 mb-8">
+                <h3 class="text-xl font-bold text-primary mb-4">
+                    <i class="fa fa-info-circle mr-2"></i>
+                    解析
+                </h3>
+                <div id="explanationText" class="text-gray-700">
+                    <!-- 解析将动态生成 -->
+                </div>
+            </div>
+            
+            <!-- 下一题按钮 -->
+            <div class="text-center">
+                <button id="nextQuestionBtn" class="hidden bg-primary text-white text-xl font-bold px-10 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                        style="pointer-events: auto !important; cursor: pointer !important;">
+                    <i class="fa fa-arrow-right mr-2"></i>
+                    下一题
+                </button>
+            </div>
+            
+            <!-- 提示文本 -->
+            <div id="hintText" class="hidden mt-4 p-4 bg-light rounded-lg border-l-4 border-warning">
+                <!-- 提示将动态生成 -->
+            </div>
+        </div>
+
+        <!-- 结果界面 -->
+        <div id="resultScreen" class="hidden z-40 relative">
+            <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <div class="mb-8">
+                    <div class="inline-block p-6 bg-light rounded-full mb-6">
+                        <i class="fa fa-trophy text-6xl text-secondary"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-primary mb-2">练习完成！</h2>
+                    <p class="text-xl text-gray-600">智能分析已完成，下一轮将针对性出题</p>
+                </div>
+                
+                <div class="mb-8">
+                    <div class="text-6xl font-bold text-primary mb-2">
+                        <i class="fa fa-star text-secondary mr-2"></i>
+                        <span id="finalScore">0</span>
+                    </div>
+                    <p class="text-xl text-gray-600">总分</p>
+                </div>
+                
+                <!-- 智能分析结果 -->
+                <div id="analysisResult" class="bg-light p-4 rounded-xl mb-8 max-w-2xl mx-auto text-left">
+                    <h3 class="font-bold text-primary text-xl mb-3 text-center"><i class="fa fa-bar-chart mr-2"></i>智能学习分析</h3>
+                    <div id="analysisContent" class="text-gray-700">
+                        <!-- 分析结果将动态生成 -->
+                    </div>
+                </div>
+                
+                <div id="resultMessage" class="mb-8 text-2xl font-bold">
+                    <!-- 结果消息将动态生成 -->
+                </div>
+                
+                <!-- 按钮组 -->
+                <div class="flex flex-col md:flex-row justify-center gap-4">
+                    <button id="viewAnswersBtn" class="bg-info text-white text-xl font-bold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+                        <i class="fa fa-list-alt mr-2"></i>
+                        查看答案
+                    </button>
+                    <button id="restartBtn" class="bg-primary text-white text-xl font-bold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+                        <i class="fa fa-refresh mr-2"></i>
+                        继续练习
+                    </button>
+                    <button id="backToHomeBtn" class="bg-dark text-white text-xl font-bold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+                        <i class="fa fa-home mr-2"></i>
+                        返回主页
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 答案回顾 -->
+            <div id="answersReview" class="hidden mt-8 bg-white rounded-2xl shadow-xl p-6">
+                <h3 class="text-2xl font-bold text-primary mb-4">
+                    <i class="fa fa-history mr-2"></i>
+                    答案回顾
+                </h3>
+                <div id="answersList" class="space-y-4">
+                    <!-- 答案列表将动态生成 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部信息 -->
+    <footer class="bg-primary text-white py-4 mt-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2026 趣味数学练习 - 智能出题系统</p>
+        </div>
+    </footer>
+
+    <script>
+        // 全局变量 - 新增智能出题相关配置
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let totalScore = 0;
+        let userAnswers = [];
+        let currentDifficultyLevel = 1; // 当前基础难度（1-5星）
+        let wrongQuestionTypes = [];    // 错误题型记录
+        let correctQuestionTypes = new Set(); // 正确题型记录
+        let practiceRound = 1;          // 练习轮次
+        
+        // DOM元素
+        const startScreen = document.getElementById('startScreen');
+        const quizScreen = document.getElementById('quizScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const startBtn = document.getElementById('startBtn');
+        const submitAnswerBtn = document.getElementById('submitAnswerBtn');
+        const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+        const hintBtn = document.getElementById('hintBtn');
+        const viewAnswersBtn = document.getElementById('viewAnswersBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const backToHomeBtn = document.getElementById('backToHomeBtn');
+        const questionText = document.getElementById('questionText');
+        const answerInput = document.getElementById('answerInput');
+        const explanationContainer = document.getElementById('explanationContainer');
+        const explanationText = document.getElementById('explanationText');
+        const difficultyStars = document.getElementById('difficultyStars');
+        const currentQuestionSpan = document.getElementById('currentQuestion');
+        const totalScoreSpan = document.getElementById('totalScore');
+        const finalScoreSpan = document.getElementById('finalScore');
+        const resultMessage = document.getElementById('resultMessage');
+        const answersList = document.getElementById('answersList');
+        const answersReview = document.getElementById('answersReview');
+        const hintText = document.getElementById('hintText');
+        const currentDifficultySpan = document.getElementById('currentDifficulty');
+        const learningTip = document.getElementById('learningTip');
+        const tipContent = document.getElementById('tipContent');
+        const analysisResult = document.getElementById('analysisResult');
+        const analysisContent = document.getElementById('analysisContent');
+        
+        // 题型配置（按难度分级）
+        const questionTypes = {
+            addition: {
+                name: "加法",
+                levels: [
+                    { min: 1, max: 10, points: 2 },    // 1星
+                    { min: 10, max: 30, points: 4 },   // 2星
+                    { min: 30, max: 100, points: 6 },  // 3星
+                    { min: 100, max: 500, points: 8 }, // 4星
+                    { min: 500, max: 1000, points: 10} // 5星
+                ]
+            },
+            subtraction: {
+                name: "减法",
+                levels: [
+                    { min: 1, max: 10, points: 2 },
+                    { min: 10, max: 30, points: 4 },
+                    { min: 30, max: 100, points: 6 },
+                    { min: 100, max: 500, points: 8 },
+                    { min: 500, max: 1000, points: 10}
+                ]
+            },
+            multiplication: {
+                name: "乘法",
+                levels: [
+                    { min: 1, max: 9, points: 2 },     // 1星：九九乘法表
+                    { min: 10, max: 20, points: 4 },   // 2星：两位数乘法
+                    { min: 20, max: 50, points: 6 },   // 3星
+                    { min: 50, max: 100, points: 8 },  // 4星
+                    { min: 100, max: 200, points: 10}  // 5星
+                ]
+            },
+            division: {
+                name: "除法",
+                levels: [
+                    { min: 1, max: 9, points: 2 },     // 1星：九九除法表
+                    { min: 10, max: 20, points: 4 },   // 2星
+                    { min: 20, max: 50, points: 6 },   // 3星
+                    { min: 50, max: 100, points: 8 },  // 4星
+                    { min: 100, max: 200, points: 10}  // 5星
+                ]
+            },
+            mixed: {
+                name: "混合运算",
+                levels: [
+                    { min: 1, max: 20, points: 4 },    // 3星起步
+                    { min: 20, max: 50, points: 6 },   // 4星
+                    { min: 50, max: 100, points: 8 },  // 5星
+                    { min: 100, max: 200, points: 9 }, // 进阶
+                    { min: 200, max: 500, points: 10}  // 高阶
+                ]
+            }
+        };
+        
+        // 核心：智能出题函数
+        function generateSmartQuestions() {
+            currentQuestions = [];
+            const totalQuestions = 5;
+            let questionCount = 0;
+            
+            console.log(`=== 第${practiceRound}轮智能出题 ===`);
+            console.log(`当前难度：${currentDifficultyLevel}星`);
+            console.log(`需要巩固的题型：${wrongQuestionTypes.join(', ')}`);
+            console.log(`已掌握的题型：${Array.from(correctQuestionTypes).join(', ')}`);
+            
+            // 第一步：优先生成错误题型（巩固练习）
+            let巩固题数量 = 0;
+            if (wrongQuestionTypes.length > 0 && practiceRound > 1) {
+                console.log("生成错题巩固题目");
+                const wrongTypes = [...new Set(wrongQuestionTypes)]; // 去重
+                巩固题数量 = Math.min(wrongTypes.length, 3); // 最多3道巩固题，避免无限循环
+                
+                for (let i = 0; i < 巩固题数量 && questionCount < totalQuestions; i++) {
+                    const type = wrongTypes[i % wrongTypes.length];
+                    const question = generateQuestionByType(type, currentDifficultyLevel);
+                    currentQuestions.push(question);
+                    questionCount++;
+                }
+            }
+            
+            // 第二步：生成新难度题目（挑战提升）
+            while (questionCount < totalQuestions) {
+                let questionType;
+                
+                // 如果有已掌握的题型，生成更高难度的该类型题目
+                if (correctQuestionTypes.size > 0 && Math.random() > 0.3) {
+                    const correctTypes = Array.from(correctQuestionTypes);
+                    questionType = correctTypes[Math.floor(Math.random() * correctTypes.length)];
+                    // 难度提升1级（不超过5星）
+                    const difficulty = Math.min(currentDifficultyLevel + 1, 5);
+                    const question = generateQuestionByType(questionType, difficulty);
+                    currentQuestions.push(question);
+                } else {
+                    // 生成新题型或当前难度题型
+                    const allTypes = Object.keys(questionTypes);
+                    questionType = allTypes[Math.floor(Math.random() * allTypes.length)];
+                    const question = generateQuestionByType(questionType, currentDifficultyLevel);
+                    currentQuestions.push(question);
+                }
+                
+                questionCount++;
+            }
+            
+            // 打乱题目顺序
+            currentQuestions.sort(() => Math.random() - 0.5);
+            console.log(`生成题目总数：${currentQuestions.length}`);
+        }
+        
+        // 根据题型和难度生成题目
+        function generateQuestionByType(type, difficulty) {
+            const config = questionTypes[type];
+            const level = config.levels[Math.min(difficulty - 1, 4)];
+            let num1, num2, num3, answer, question, explanation;
+            
+            switch(type) {
+                case 'addition':
+                    num1 = Math.floor(Math.random() * (level.max - level.min + 1)) + level.min;
+                    num2 = Math.floor(Math.random() * (level.max - level.min + 1)) + level.min;
+                    answer = num1 + num2;
+                    question = `${num1} + ${num2} = ?`;
+                    explanation = `${num1} + ${num2} = ${answer}`;
+                    break;
+                    
+                case 'subtraction':
+                    num1 = Math.floor(Math.random() * (level.max - level.min + 1)) + level.min;
+                    num2 = Math.floor(Math.random() * num1) + 1; // 确保结果为正
+                    answer = num1 - num2;
+                    question = `${num1} - ${num2} = ?`;
+                    explanation = `${num1} - ${num2} = ${answer}`;
+                    break;
+                    
+                case 'multiplication':
+                    num1 = Math.floor(Math.random() * (level.max - level.min + 1)) + level.min;
+                    num2 = Math.floor(Math.random() * 10) + 1;
+                    answer = num1 * num2;
+                    question = `${num1} × ${num2} = ?`;
+                    explanation = `${num1} × ${num2} = ${answer}`;
+                    break;
+                    
+                case 'division':
+                    num2 = Math.floor(Math.random() * 10) + 1;
+                    num1 = num2 * (Math.floor(Math.random() * (level.max - level.min + 1)) + level.min);
+                    answer = num1 / num2;
+                    question = `${num1} ÷ ${num2} = ?`;
+                    explanation = `${num1} ÷ ${num2} = ${answer}`;
+                    break;
+                    
+                case 'mixed':
+                    // 混合运算（如：(a+b)×c）
+                    num1 = Math.floor(Math.random() * 10) + 1;
+                    num2 = Math.floor(Math.random() * 10) + 1;
+                    num3 = Math.floor(Math.random() * 5) + 1;
+                    answer = (num1 + num2) * num3;
+                    question = `(${num1} + ${num2}) × ${num3} = ?`;
+                    explanation = `先算括号里：${num1} + ${num2} = ${num1+num2}，再算乘法：${num1+num2} × ${num3} = ${answer}`;
+                    break;
+            }
+            
+            return {
+                question: question,
+                answer: answer.toString(),
+                difficulty: difficulty,
+                type: type,
+                typeName: config.name,
+                points: level.points,
+                explanation: explanation
+            };
+        }
+        
+        // 开始练习
+        window.startQuiz = function() {
+            console.log(`=== 第${practiceRound}轮练习开始 ===`);
+            
+            try {
+                // 重置本轮状态
+                currentQuestionIndex = 0;
+                score = 0;
+                
+                // 显示学习提示（非第一轮）
+                if (practiceRound > 1) {
+                    learningTip.classList.remove('hidden');
+                    if (wrongQuestionTypes.length > 0) {
+                        const wrongTypes = [...new Set(wrongQuestionTypes)].map(t => questionTypes[t].name);
+                        tipContent.textContent = `本轮会重点练习你出错的${wrongTypes.join('、')}题型，加油！`;
+                    } else {
+                        tipContent.textContent = `你掌握得很好！本轮题目难度已提升到${Math.min(currentDifficultyLevel+1,5)}星，挑战一下吧！`;
+                    }
+                }
+                
+                // 智能生成题目
+                generateSmartQuestions();
+                
+                // 更新难度显示
+                currentDifficultySpan.textContent = currentDifficultyLevel;
+                
+                // 更新总分显示
+                totalScoreSpan.textContent = totalScore;
+                
+                // 切换界面
+                startScreen.style.display = 'none';
+                quizScreen.style.display = 'block';
+                resultScreen.style.display = 'none';
+                
+                // 显示第一题
+                showQuestion(0);
+                
+                console.log('=== 练习启动完成 ===');
+            } catch (error) {
+                console.error('开始练习出错:', error);
+                alert('启动失败，请刷新页面重试：' + error.message);
+            }
+        };
+        
+        // 显示题目
+        function showQuestion(index) {
+            try {
+                const question = currentQuestions[index];
+                if (!question) {
+                    console.error('题目不存在:', index);
+                    return;
+                }
+                
+                // 更新题目文本
+                questionText.textContent = question.question;
+                
+                // 更新难度星级
+                updateDifficultyStars(question.difficulty);
+                
+                // 更新题目编号
+                currentQuestionSpan.textContent = index + 1;
+                
+                // 重置输入框
+                answerInput.value = '';
+                answerInput.classList.remove('border-success', 'border-danger', 'correct-animation', 'wrong-animation');
+                answerInput.classList.add('border-4', 'border-primary');
+                answerInput.disabled = false;
+                answerInput.focus();
+                
+                // 隐藏无关元素
+                explanationContainer.classList.add('hidden');
+                nextQuestionBtn.classList.add('hidden');
+                hintText.classList.add('hidden');
+                
+                // 启用提交按钮
+                submitAnswerBtn.disabled = false;
+                
+                console.log(`显示题目${index+1}: ${question.question} (难度${question.difficulty}星)`);
+            } catch (error) {
+                console.error('显示题目出错:', error);
+            }
+        }
+        
+        // 更新难度星级
+        function updateDifficultyStars(level) {
+            difficultyStars.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const star = document.createElement('i');
+                star.className = `fa fa-star text-2xl mx-1 ${i < level ? 'text-secondary star-glow twinkle' : 'text-gray-300'}`;
+                if (i < level) {
+                    star.style.animationDelay = `${i * 0.2}s`;
+                }
+                difficultyStars.appendChild(star);
+            }
+        }
+        
+        // 检查答案 - 智能记录对错题型
+        function checkAnswer() {
+            try {
+                const userAnswer = answerInput.value.trim();
+                if (!userAnswer) {
+                    alert('请输入答案后再提交！');
+                    return;
+                }
+                
+                const question = currentQuestions[currentQuestionIndex];
+                const isCorrect = userAnswer === question.answer;
+                
+                // 保存答案
+                userAnswers.push({
+                    question: question.question,
+                    userAnswer: userAnswer,
+                    correctAnswer: question.answer,
+                    isCorrect: isCorrect,
+                    type: question.type,
+                    typeName: question.typeName,
+                    difficulty: question.difficulty,
+                    points: isCorrect ? question.points : 0
+                });
+                
+                // 智能记录：更新对错题型
+                if (isCorrect) {
+                    correctQuestionTypes.add(question.type);
+                    score += question.points;
+                    totalScore += question.points;
+                    totalScoreSpan.textContent = totalScore;
+                    answerInput.classList.add('border-success', 'correct-animation');
+                    console.log(`题目${currentQuestionIndex+1}正确，题型：${question.typeName}`);
+                } else {
+                    wrongQuestionTypes.push(question.type);
+                    answerInput.classList.add('border-danger', 'wrong-animation');
+                    console.log(`题目${currentQuestionIndex+1}错误，题型：${question.typeName}`);
+                }
+                
+                // 显示解析
+                showExplanation(isCorrect);
+                
+                // 禁用输入框和提交按钮
+                answerInput.disabled = true;
+                submitAnswerBtn.disabled = true;
+                
+                // 显示下一题按钮
+                nextQuestionBtn.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('检查答案出错:', error);
+                alert('提交答案失败：' + error.message);
+            }
+        }
+        
+        // 显示解析
+        function showExplanation(isCorrect) {
+            const question = currentQuestions[currentQuestionIndex];
+            let explanationHTML = `<div class="mb-3 ${isCorrect ? 'text-success' : 'text-danger'} font-bold">
+                <i class="fa fa-${isCorrect ? 'check-circle' : 'times-circle'} mr-2"></i>
+                ${isCorrect ? '回答正确！' : '回答错误！'}
+            </div>`;
+            explanationHTML += `<div class="mb-2"><strong>正确答案：</strong> ${question.answer}</div>`;
+            explanationHTML += `<div><strong>解析：</strong>${question.explanation}</div>`;
+            explanationHTML += `<div class="mt-3 text-primary"><strong>得分：</strong> ${isCorrect ? question.points : 0}/${question.points} 分</div>`;
+            explanationHTML += `<div class="mt-1 text-sm text-gray-500"><strong>题型：</strong> ${question.typeName} (${question.difficulty}星难度)</div>`;
+            
+            explanationText.innerHTML = explanationHTML;
+            explanationContainer.classList.remove('hidden');
+        }
+        
+        // 下一题
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuestions.length) {
+                showQuestion(currentQuestionIndex);
+            } else {
+                showResults();
+            }
+        }
+        
+        // 显示结果 - 智能分析
+        function showResults() {
+            quizScreen.style.display = 'none';
+            resultScreen.style.display = 'block';
+            finalScoreSpan.textContent = totalScore;
+            
+            // 1. 更新难度（根据正确率）
+            const correctCount = userAnswers.filter(a => a.isCorrect).length;
+            const accuracy = correctCount / userAnswers.length;
+            
+            if (accuracy >= 0.8 && practiceRound % 2 === 0) {
+                // 正确率80%以上，提升难度
+                currentDifficultyLevel = Math.min(currentDifficultyLevel + 1, 5);
+                currentDifficultySpan.textContent = currentDifficultyLevel;
+            }
+            
+            // 2. 生成智能分析报告
+            generateAnalysisReport();
+            
+            // 3. 结果提示
+            let message, color, icon;
+            const percentage = (totalScore / (practiceRound * 14)) * 100;
+            
+            if (percentage >= 90) {
+                message = `太棒了！你的正确率高达${Math.round(accuracy*100)}%，已掌握${correctQuestionTypes.size}种题型！`;
+                color = 'text-success';
+                icon = 'fa-trophy';
+            } else if (percentage >= 70) {
+                message = `做得很好！继续练习${wrongQuestionTypes.length > 0 ? wrongQuestionTypes.map(t => questionTypes[t].name).join('、') + '题型' : '更高难度'}吧！`;
+                color = 'text-primary';
+                icon = 'fa-star';
+            } else if (percentage >= 50) {
+                message = `不错的尝试！重点巩固${wrongQuestionTypes.length > 0 ? wrongQuestionTypes.map(t => questionTypes[t].name).join('、') + '题型' : '基础题'}会进步更快！`;
+                color = 'text-info';
+                icon = 'fa-thumbs-up';
+            } else {
+                message = `加油！先把${wrongQuestionTypes.length > 0 ? wrongQuestionTypes.map(t => questionTypes[t].name).join('、') + '题型' : '基础题'}练熟，你会越来越棒的！`;
+                color = 'text-warning';
+                icon = 'fa-heart';
+            }
+            
+            resultMessage.innerHTML = `<i class="fa ${icon} text-2xl mr-2"></i><span class="${color}">${message}</span>`;
+        }
+        
+        // 生成智能分析报告
+        function generateAnalysisReport() {
+            let analysisHTML = '';
+            
+            // 基础统计
+            const totalQuestions = userAnswers.length;
+            const correctCount = userAnswers.filter(a => a.isCorrect).length;
+            const wrongCount = totalQuestions - correctCount;
+            
+            analysisHTML += `<div class="mb-4">
+                <strong>练习统计：</strong>
+                共答题${totalQuestions}道，正确${correctCount}道，错误${wrongCount}道，正确率${Math.round((correctCount/totalQuestions)*100)}%
+            </div>`;
+            
+            // 错误题型分析
+            if (wrongCount > 0) {
+                const wrongTypes = [...new Set(wrongQuestionTypes)];
+                analysisHTML += `<div class="mb-4 p-2 bg-red-50 rounded-lg border-l-4 border-danger">
+                    <strong>需要巩固的题型：</strong>
+                    ${wrongTypes.map(t => {
+                        const count = wrongQuestionTypes.filter(type => type === t).length;
+                        return `${questionTypes[t].name}（错误${count}次）`;
+                    }).join('、')}
+                </div>`;
+                analysisHTML += `<div class="text-sm text-danger"><i class="fa fa-exclamation-circle mr-1"></i> 下一轮将重点练习以上题型</div>`;
+            } else {
+                analysisHTML += `<div class="mb-4 p-2 bg-green-50 rounded-lg border-l-4 border-success">
+                    <strong>恭喜：</strong> 本轮答题全部正确！
+                </div>`;
+                analysisHTML += `<div class="text-sm text-success"><i class="fa fa-check-circle mr-1"></i> 下一轮将提升题目难度</div>`;
+            }
+            
+            // 已掌握题型
+            if (correctQuestionTypes.size > 0) {
+                analysisHTML += `<div class="mt-4">
+                    <strong>已掌握的题型：</strong>
+                    ${Array.from(correctQuestionTypes).map(t => questionTypes[t].name).join('、')}
+                </div>`;
+            }
+            
+            // 当前难度说明
+            analysisHTML += `<div class="mt-4 text-primary">
+                <strong>当前难度等级：</strong> ${currentDifficultyLevel}星（最高5星）
+            </div>`;
+            
+            analysisContent.innerHTML = analysisHTML;
+        }
+        
+        // 查看答案
+        function toggleAnswersReview() {
+            if (answersReview.classList.contains('hidden')) {
+                let html = '';
+                userAnswers.forEach((answer, index) => {
+                    html += `<div class="p-4 rounded-lg border ${answer.isCorrect ? 'border-success bg-green-50' : 'border-danger bg-red-50'}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="font-bold text-lg"><i class="fa fa-${answer.isCorrect ? 'check-circle text-success' : 'times-circle text-danger'} mr-2"></i>题目 ${index + 1}</div>
+                            <div class="text-sm font-semibold ${answer.isCorrect ? 'text-success' : 'text-danger'}">${answer.isCorrect ? '正确' : '错误'} (${answer.difficulty}星)</div>
+                        </div>
+                        <div class="mb-2"><strong>题目：</strong> ${answer.question}</div>
+                        <div class="mb-2"><strong>你的答案：</strong> <span class="${answer.isCorrect ? 'text-success' : 'text-danger'}">${answer.userAnswer}</span></div>
+                        <div class="mb-2"><strong>正确答案：</strong> <span class="text-success">${answer.correctAnswer}</span></div>
+                        <div class="mb-1"><strong>题型：</strong> ${answer.typeName}</div>
+                        <div><strong>得分：</strong> <span class="text-primary font-bold">${answer.points} 分</span></div>
+                    </div>`;
+                });
+                answersList.innerHTML = html;
+                answersReview.classList.remove('hidden');
+                viewAnswersBtn.innerHTML = '<i class="fa fa-times mr-2"></i>隐藏答案';
+            } else {
+                answersReview.classList.add('hidden');
+                viewAnswersBtn.innerHTML = '<i class="fa fa-list-alt mr-2"></i>查看答案';
+            }
+        }
+        
+        // 继续练习（智能出题）
+        function restartQuiz() {
+            practiceRound++;
+            userAnswers = []; // 清空本轮答题记录
+            answersReview.classList.add('hidden');
+            viewAnswersBtn.innerHTML = '<i class="fa fa-list-alt mr-2"></i>查看答案';
+            
+            // 保留错题记录，清空对题记录（重新验证）
+            correctQuestionTypes.clear();
+            
+            // 修复：防止 wrongQuestionTypes 无限增长导致卡死
+            if (wrongQuestionTypes.length > 10) {
+                wrongQuestionTypes = wrongQuestionTypes.slice(-5); // 只保留最近5个错题类型
+            }
+            
+            // 启动下一轮智能练习
+            window.startQuiz();
+        }
+        
+        // 返回主页（重置所有状态）
+        function backToHome() {
+            // 完全重置所有学习状态
+            currentDifficultyLevel = 1;
+            wrongQuestionTypes = [];
+            correctQuestionTypes.clear();
+            practiceRound = 1;
+            totalScore = 0;
+            userAnswers = [];
+            
+            // 更新界面
+            currentDifficultySpan.textContent = currentDifficultyLevel;
+            totalScoreSpan.textContent = totalScore;
+            learningTip.classList.add('hidden');
+            
+            // 切换界面
+            resultScreen.style.display = 'none';
+            answersReview.classList.add('hidden');
+            startScreen.style.display = 'flex';
+            viewAnswersBtn.innerHTML = '<i class="fa fa-list-alt mr-2"></i>查看答案';
+        }
+        
+        // 显示提示
+        function showHint() {
+            const question = currentQuestions[currentQuestionIndex];
+            let hint = '';
+            
+            switch(question.type) {
+                case 'addition': hint = '提示：加法就是把两个数合起来'; break;
+                case 'subtraction': hint = '提示：减法就是从一个数里去掉另一个数'; break;
+                case 'multiplication': hint = '提示：乘法就是几个相同的数相加'; break;
+                case 'division': hint = '提示：除法就是把一个数平均分成几份'; break;
+                case 'mixed': hint = '提示：混合运算先算括号里的，再算括号外的'; break;
+                default: hint = '提示：仔细想想哦！';
+            }
+            
+            hintText.textContent = hint;
+            hintText.classList.remove('hidden');
+        }
+        
+        // 页面加载完成绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== 智能出题系统初始化 ===');
+            
+            // 绑定按钮事件
+            if (startBtn) {
+                startBtn.addEventListener('click', window.startQuiz);
+                startBtn.onclick = window.startQuiz;
+            }
+            
+            if (submitAnswerBtn) submitAnswerBtn.addEventListener('click', checkAnswer);
+            if (nextQuestionBtn) nextQuestionBtn.addEventListener('click', nextQuestion);
+            if (hintBtn) hintBtn.addEventListener('click', showHint);
+            if (viewAnswersBtn) viewAnswersBtn.addEventListener('click', toggleAnswersReview);
+            if (restartBtn) restartBtn.addEventListener('click', restartQuiz);
+            if (backToHomeBtn) backToHomeBtn.addEventListener('click', backToHome);
+            
+            // 回车提交答案
+            if (answerInput) {
+                answerInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !answerInput.disabled) {
+                        checkAnswer();
+                    }
+                });
+            }
+            
+            // 初始状态
+            startScreen.style.display = 'flex';
+            quizScreen.style.display = 'none';
+            resultScreen.style.display = 'none';
+            
+            console.log('=== 初始化完成 ===');
+        });
+    </script>
+</body>
+</html>
